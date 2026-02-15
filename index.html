@@ -681,14 +681,15 @@
 
     // Countdown Timer
     const countdownEl = document.getElementById('countdown');
-    let timeLeft = 86400;
-    setInterval(() => {
-      if(timeLeft<=0)return;
-      timeLeft--;
-      let m = Math.floor(timeLeft/60).toString().padStart(2,'0');
-      let s = (timeLeft%60).toString().padStart(2,'0');
-      countdownEl.textContent = `${m}:${s}`;
-    }, 1000);
+let timeLeft = 86400; // 24 Stunden in Sekunden
+setInterval(() => {
+  if(timeLeft<=0)return;
+  timeLeft--;
+  let h = Math.floor(timeLeft/3600).toString().padStart(2,'0');
+  let m = Math.floor((timeLeft%3600)/60).toString().padStart(2,'0');
+  let s = (timeLeft%60).toString().padStart(2,'0');
+  countdownEl.textContent = `${h}:${m}:${s}`;
+}, 1000);
 
     // Background lines
     const bgStreams = document.getElementById('bgStreams');

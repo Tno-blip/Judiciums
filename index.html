@@ -680,15 +680,17 @@
     }
 
     // Countdown Timer
-    const countdownEl = document.getElementById('countdown');
-let timeLeft = 86400;
-setInterval(() => {
-  if(timeLeft<=0)return;
+let timeLeft = 86400; // 24h in Sekunden
+const countdownTimer = setInterval(() => {
+  if(timeLeft<=0) {
+    clearInterval(countdownTimer);
+    return;
+  }
   timeLeft--;
   let h = Math.floor(timeLeft/3600).toString().padStart(2,'0');
   let m = Math.floor((timeLeft%3600)/60).toString().padStart(2,'0');
   let s = (timeLeft%60).toString().padStart(2,'0');
-  countdownEl.textContent = `${h}:${m}:${s}`;
+  document.getElementById('countdown').textContent = `${h}:${m}:${s}`;
 }, 1000);
 
     // Background lines

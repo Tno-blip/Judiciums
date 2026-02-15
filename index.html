@@ -242,21 +242,24 @@
     }
 
     .vote-btn {
-      font-family: 'Courier New', monospace;
-      font-size: clamp(1.2rem, 3vw, 1.8rem);
-      font-weight: 900;
-      letter-spacing: 8px;
-      text-transform: uppercase;
-      border: 2px solid;
-      padding: 18px 60px;
-      cursor: pointer;
-      position: relative;
-      overflow: hidden;
-      transition: all 0.15s ease;
-      background: transparent;
-      flex: 1;           
-      text-align: center
-    }
+  font-family: 'Courier New', monospace;
+  font-size: clamp(1.2rem, 3vw, 1.8rem);
+  font-weight: 900;
+  letter-spacing: 8px;
+  text-transform: uppercase;
+  border: 2px solid;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  transition: all 0.15s ease;
+  background: transparent;
+
+  flex: 1;                    /* gleiche Breite */
+  display: flex;               /* Flexbox für Text */
+  justify-content: center;     /* horizontal zentrieren */
+  align-items: center;         /* vertikal zentrieren */
+  padding: 18px 0;             /* keine horizontale Padding nötig */
+}
 
     .vote-btn::before {
       content: '';

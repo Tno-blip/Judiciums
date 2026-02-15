@@ -594,31 +594,62 @@
     }, 1000);
 
     // ── Vote Logic ─────────────────────────────────
-    let votesJa = 0, votesNein = 0;
-    const btnJa = document.getElementById('btnJa');
-    const btnNein = document.getElementById('btnNein');
-    const barJa = document.getElementById('barJa');
-    const barLabelJa = document.getElementById('barLabelJa');
-    const barLabelNein = document.getElementById('barLabelNein');
-    const statJa = document.getElementById('statJa');
-    const statNein = document.getElementById('statNein');
-    const totalVotes = document.getElementById('totalVotes');
+    <script>
+  // ── Vote Logic mit einmaligem Voten ─────────────
+  let votesJa = 0, votesNein = 0;
 
-    function updateVotes(){
-      let total = votesJa + votesNein;
-      if(total===0) total=1;
-      let pctJa = Math.round((votesJa/total)*100);
-      let pctNein = Math.round((votesNein/total)*100);
-      barJa.style.width = pctJa+'%';
-      barLabelJa.textContent = pctJa+'%';
-      barLabelNein.textContent = pctNein+'%';
-      statJa.textContent = pctJa+'%';
-      statNein.textContent = pctNein+'%';
-      totalVotes.textContent = total + ' Stimmen';
-    }
+  const btnJa = document.getElementById('btnJa');
+  const btnNein = document.getElementById('btnNein');
+  const barJa = document.getElementById('barJa');
+  const barLabelJa = document.getElementById('barLabelJa');
+  const barLabelNein = document.getElementById('barLabelNein');
+  const statJa = document.getElementById('statJa');
+  const statNein = document.getElementById('statNein');
+  const totalVotes = document.getElementById('totalVotes');
 
-    btnJa.addEventListener('click', ()=>{ votesJa++; updateVotes(); });
-    btnNein.addEventListener('click', ()=>{ votesNein++; updateVotes(); });
+  // ✅ Prüfen, ob schon gevotet (localStorage)
+  let voted = localStorage.getItem('voted') === 'true';
+
+  function updateVotes(){
+    let total = votesJa + votesNein;
+    if(total===0) total=1; // damit nicht durch 0 geteilt wird
+    let pctJa = Math.round((votesJa/total)*100);
+    let pctNein = Math.round((votesNein/total)*100);
+    barJa.style.width = pctJa+'%';
+    barLabelJa.textContent = pctJa+'%';
+    barLabelNein.textContent = pctNein+'%';
+    statJa.textContent = pctJa+'%';
+    statNein.textContent = pctNein+'%';
+    totalVotes.textContent = total + ' Stimmen';
+  }
+
+  function disableButtons(){
+    btnJa.disabled = true;
+    btnNein.disabled = true;
+  }
+
+  // ✅ Event Listener
+  btnJa.addEventListener('click', () => {
+    if(voted) return;        // schon gevotet? nix machen
+    votesJa++;
+    voted = true;
+    localStorage.setItem('voted', 'true'); // speichern
+    updateVotes();
+    disableButtons();        // Buttons sperren
+  });
+
+  btnNein.addEventListener('click', () => {
+    if(voted) return;
+    votesNein++;
+    voted = true;
+    localStorage.setItem('voted', 'true');
+    updateVotes();
+    disableButtons();
+  });
+
+  // Wenn schon gevotet, Buttons sperren beim Laden
+  if(voted) disableButtons();
+</script>
 
     // ── Background lines ──────────────────────────
     const bgStreams = document.getElementById('bgStreams');

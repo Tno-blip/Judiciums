@@ -255,10 +255,7 @@
   background: transparent;
 
  padding: 18px 60px; 
-  flex: 1;
-  display: flex;
-  justify-content: center;
-  align-items: center;     
+  min-width: 200px;  
 }
 
     .vote-btn::before {
@@ -280,7 +277,15 @@
     .btn-nein:hover { box-shadow: 0 0 30px rgba(0,224,255,0.25), inset 0 0 30px rgba(0,224,255,0.05); }
 
     .btn-ja:active, .btn-nein:active { transform: scale(0.96); }
-    .vote-btn:disabled { pointer-events: none; }
+    .vote-btn:disabled { 
+  pointer-events: none; 
+  opacity: 0.3;
+  filter: grayscale(1);
+  border-color: var(--text-dim);
+  color: var(--text-dim);
+  text-shadow: none;
+  cursor: not-allowed;
+}
 
     /* ── Screen Display ───────────────────────────── */
     .screen-wrapper {

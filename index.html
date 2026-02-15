@@ -94,16 +94,16 @@
 
     /* ── Container ─────────────────────────────────── */
     .container {
-  position: relative;
-  z-index: 10;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  min-height: 100vh;
-  padding: 80px 20px 40px;
-  overflow-y: auto;  /* ← DIESE ZEILE HINZUFÜGEN */
-}
+      position: relative;
+      z-index: 10;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 80px 20px 40px;
+      overflow-y: auto;
+    }
 
     /* ── Header ────────────────────────────────────── */
     .header {
@@ -243,22 +243,21 @@
     }
 
     .vote-btn {
-  font-family: 'Courier New', monospace;
-  font-size: clamp(1.2rem, 3vw, 1.8rem);
-  font-weight: 900;
-  letter-spacing: 8px;
-  text-transform: uppercase;
-  border: 2px solid;
-  cursor: pointer;
-  position: relative;
-  overflow: hidden;
-  transition: all 0.15s ease;
-  background: transparent;
-
- padding: 18px 60px; 
-  min-width: 200px;  
+      font-family: 'Courier New', monospace;
+      font-size: clamp(1.2rem, 3vw, 1.8rem);
+      font-weight: 900;
+      letter-spacing: 8px;
+      text-transform: uppercase;
+      border: 2px solid;
+      cursor: pointer;
+      position: relative;
+      overflow: hidden;
+      transition: all 0.15s ease;
+      background: transparent;
+      padding: 18px 60px;
+      width: 220px;
       text-align: center;
-}
+    }
 
     .vote-btn::before {
       content: '';
@@ -280,14 +279,14 @@
 
     .btn-ja:active, .btn-nein:active { transform: scale(0.96); }
     .vote-btn:disabled { 
-  pointer-events: none; 
-  opacity: 0.3;
-  filter: grayscale(1);
-  border-color: var(--text-dim);
-  color: var(--text-dim);
-  text-shadow: none;
-  cursor: not-allowed;
-}
+      pointer-events: none; 
+      opacity: 0.3;
+      filter: grayscale(1);
+      border-color: var(--text-dim);
+      color: var(--text-dim);
+      text-shadow: none;
+      cursor: not-allowed;
+    }
 
     /* ── Screen Display ───────────────────────────── */
     .screen-wrapper {
@@ -510,7 +509,7 @@
 
     <div class="vote-stats" id="voteStats">
       <div class="stats-header">
-        <span> JA </span>
+        <span>JA</span>
         <span>NEIN</span>
       </div>
       <div class="bar-container" id="barContainer">
@@ -532,13 +531,103 @@
 
   <div class="fs-hint" id="fsHint" title="Vollbild aktivieren">Fullscreen</div>
 
-  <script>
-    // ── Video Loading with Error Handling ──────────
+  <!-- Firebase SDK -->
+  <script type="module">
+    // Firebase imports
+    import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
+    import { getDatabase, ref, onValue, set, runTransaction } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js';
+
+    // Firebase config
+    const firebaseConfig = {
+      apiKey: "AIzaSyB8GccuvcMW3dAjBOd1N7tBmP9EeVA7TzA",
+      authDomain: "disconnect-voting.firebaseapp.com",
+      databaseURL: "https://disconnect-voting-default-rtdb.europe-west1.firebasedatabase.app",
+      projectId: "disconnect-voting",
+      storageBucket: "disconnect-voting.firebasestorage.app",
+      messagingSenderId: "553614816711",
+      appId: "1:553614816711:web:f239a9026cefa9482055e2"
+    };
+
+    // Initialize Firebase
+    const app = initializeApp(firebaseConfig);
+    const database = getDatabase(app);
+    const votesRef = ref(database, 'votes');
+
+    // UI Elements
+    const btnJa = document.getElementById('btnJa');
+    const btnNein = document.getElementById('btnNein');
+    const barJa = document.getElementById('barJa');
+    const barLabelJa = document.getElementById('barLabelJa');
+    const barLabelNein = document.getElementById('barLabelNein');
+    const statJa = document.getElementById('statJa');
+    const statNein = document.getElementById('statNein');
+    const totalVotes = document.getElementById('totalVotes');
+
+    // Check if user already voted
+    let voted = localStorage.getItem('voted') === 'true';
+
+    // Update UI with vote data
+    function updateUI(votesJa, votesNein) {
+      let total = votesJa + votesNein;
+      if(total === 0) total = 1;
+      let pctJa = Math.round((votesJa/total)*100);
+      let pctNein = Math.round((votesNein/total)*100);
+      
+      barJa.style.width = pctJa+'%';
+      barLabelJa.textContent = pctJa+'%';
+      barLabelNein.textContent = pctNein+'%';
+      statJa.textContent = pctJa+'%';
+      statNein.textContent = pctNein+'%';
+      totalVotes.textContent = total + ' Stimmen';
+    }
+
+    // Listen for real-time updates
+    onValue(votesRef, (snapshot) => {
+      const data = snapshot.val() || { ja: 0, nein: 0 };
+      updateUI(data.ja, data.nein);
+    });
+
+    // Disable buttons if already voted
+    function disableButtons() {
+      btnJa.disabled = true;
+      btnNein.disabled = true;
+    }
+
+    if(voted) disableButtons();
+
+    // Vote for JA
+    btnJa.addEventListener('click', () => {
+      if(voted) return;
+      
+      runTransaction(votesRef, (current) => {
+        if(!current) return { ja: 1, nein: 0 };
+        return { ja: (current.ja || 0) + 1, nein: current.nein || 0 };
+      }).then(() => {
+        voted = true;
+        localStorage.setItem('voted', 'true');
+        disableButtons();
+      });
+    });
+
+    // Vote for NEIN
+    btnNein.addEventListener('click', () => {
+      if(voted) return;
+      
+      runTransaction(votesRef, (current) => {
+        if(!current) return { ja: 0, nein: 1 };
+        return { ja: current.ja || 0, nein: (current.nein || 0) + 1 };
+      }).then(() => {
+        voted = true;
+        localStorage.setItem('voted', 'true');
+        disableButtons();
+      });
+    });
+
+    // Video Loading
     const screenVideo = document.getElementById('screenVideo');
     const screenDisplay = document.getElementById('screenDisplay');
     const screenLabel = document.getElementById('screenLabel');
 
-    // Try to autoplay, handle errors gracefully
     function initVideo() {
       screenVideo.play().then(() => {
         console.log('Video playing successfully');
@@ -547,7 +636,6 @@
         console.warn('Autoplay failed, user interaction required:', err);
         screenLabel.textContent = 'Klicken zum Abspielen';
         
-        // Allow click to play
         screenDisplay.addEventListener('click', () => {
           screenVideo.play().then(() => {
             screenLabel.textContent = 'Video läuft';
@@ -559,7 +647,6 @@
       });
     }
 
-    // Handle video errors
     screenVideo.addEventListener('error', (e) => {
       console.error('Video error:', e);
       showVideoError();
@@ -582,16 +669,15 @@
       screenDisplay.appendChild(errorDiv);
     }
 
-    // Try to load video when page is ready
     if (document.readyState === 'loading') {
       document.addEventListener('DOMContentLoaded', initVideo);
     } else {
       initVideo();
     }
 
-    // ── Countdown Timer ─────────────────────────────
+    // Countdown Timer
     const countdownEl = document.getElementById('countdown');
-    let timeLeft = 300; // 5 Minuten
+    let timeLeft = 300;
     setInterval(() => {
       if(timeLeft<=0)return;
       timeLeft--;
@@ -600,63 +686,7 @@
       countdownEl.textContent = `${m}:${s}`;
     }, 1000);
 
-  // ── Vote Logic mit einmaligem Voten ─────────────
-  let votesJa = 0, votesNein = 0;
-
-  const btnJa = document.getElementById('btnJa');
-  const btnNein = document.getElementById('btnNein');
-  const barJa = document.getElementById('barJa');
-  const barLabelJa = document.getElementById('barLabelJa');
-  const barLabelNein = document.getElementById('barLabelNein');
-  const statJa = document.getElementById('statJa');
-  const statNein = document.getElementById('statNein');
-  const totalVotes = document.getElementById('totalVotes');
-
-  // ✅ Prüfen, ob schon gevotet (localStorage)
-  let voted = localStorage.getItem('voted') === 'true';
-
-  function updateVotes(){
-    let total = votesJa + votesNein;
-    if(total===0) total=1; // damit nicht durch 0 geteilt wird
-    let pctJa = Math.round((votesJa/total)*100);
-    let pctNein = Math.round((votesNein/total)*100);
-    barJa.style.width = pctJa+'%';
-    barLabelJa.textContent = pctJa+'%';
-    barLabelNein.textContent = pctNein+'%';
-    statJa.textContent = pctJa+'%';
-    statNein.textContent = pctNein+'%';
-    totalVotes.textContent = total + ' Stimmen';
-  }
-
-  function disableButtons(){
-    btnJa.disabled = true;
-    btnNein.disabled = true;
-  }
-
-  // ✅ Event Listener
-  btnJa.addEventListener('click', () => {
-    if(voted) return;        // schon gevotet? nix machen
-    votesJa++;
-    voted = true;
-    localStorage.setItem('voted', 'true'); // speichern
-    updateVotes();
-    disableButtons();        // Buttons sperren
-  });
-
-  btnNein.addEventListener('click', () => {
-    if(voted) return;
-    votesNein++;
-    voted = true;
-    localStorage.setItem('voted', 'true');
-    updateVotes();
-    disableButtons();
-  });
-
-  // Wenn schon gevotet, Buttons sperren beim Laden
-  if(voted) disableButtons();
-
-
-    // ── Background lines ──────────────────────────
+    // Background lines
     const bgStreams = document.getElementById('bgStreams');
     for(let i=0;i<60;i++){
       let div = document.createElement('div');
@@ -667,7 +697,7 @@
       bgStreams.appendChild(div);
     }
 
-    // ── Pixel noise overlay ────────────────────────
+    // Pixel noise
     const canvas = document.getElementById('pixelNoise');
     const ctx = canvas.getContext('2d');
     function resizeCanvas(){ canvas.width=window.innerWidth; canvas.height=window.innerHeight; }
@@ -686,11 +716,11 @@
     }
     setInterval(noiseFlash,800);
 
-    // ── Glitch title effect ───────────────────────
+    // Glitch title
     const mainTitle = document.getElementById('mainTitle');
     setInterval(()=>{ mainTitle.classList.add('glitch-active'); setTimeout(()=>mainTitle.classList.remove('glitch-active'),300); },4000);
 
-    // ── Fullscreen hint ───────────────────────────
+    // Fullscreen
     const fsHint = document.getElementById('fsHint');
     fsHint.addEventListener('click',()=>{ 
       if(document.documentElement.requestFullscreen) {

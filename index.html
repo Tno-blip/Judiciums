@@ -254,11 +254,11 @@
   transition: all 0.15s ease;
   background: transparent;
 
-  flex: 1;                    /* gleiche Breite */
-  display: flex;               /* Flexbox für Text */
-  justify-content: center;     /* horizontal zentrieren */
-  align-items: center;         /* vertikal zentrieren */
-  padding: 18px 0;             /* keine horizontale Padding nötig */
+ padding: 18px 60px; 
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;     
 }
 
     .vote-btn::before {
@@ -649,7 +649,7 @@
 
   // Wenn schon gevotet, Buttons sperren beim Laden
   if(voted) disableButtons();
-</script>
+
 
     // ── Background lines ──────────────────────────
     const bgStreams = document.getElementById('bgStreams');

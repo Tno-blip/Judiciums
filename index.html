@@ -628,21 +628,37 @@
     onValue(timerRef, (snapshot) => {
       const timerData = snapshot.val();
       
+      console.log('Timer data from Firebase:', timerData); // Debug
+      
       if(timerInterval) {
         clearInterval(timerInterval);
       }
 
-      if(!timerData || !timerData.isRunning) {
-        // Timer gestoppt oder nicht initialisiert
-        const duration = (timerData && timerData.duration) || 86400;
-        updateCountdown(duration);
+      if(!timerData) {
+        console.log('No timer data, showing default 24h');
+        updateCountdown(86400);
+        return;
+      }
+
+      if(!timerData.isRunning) {
+        console.log('Timer paused at:', timerData.duration);
+        updateCountdown(timerData.duration || 86400);
         return;
       }
 
       // Timer läuft
       const startTime = timerData.startTime;
       const duration = timerData.duration || 86400;
+      
+      console.log('Timer running - start:', new Date(startTime), 'duration:', duration);
 
+      // Sofort einmal updaten
+      const now = Date.now();
+      const elapsed = Math.floor((now - startTime) / 1000);
+      const remaining = Math.max(0, duration - elapsed);
+      updateCountdown(remaining);
+
+      // Dann kontinuierlich updaten
       timerInterval = setInterval(() => {
         const now = Date.now();
         const elapsed = Math.floor((now - startTime) / 1000);
@@ -655,7 +671,7 @@
         }
         
         updateCountdown(remaining);
-      }, 100); // Update alle 100ms für bessere Sync
+      }, 1000); // Update jede Sekunde
     });
 
     // ── Video Loading ──────────────────────────────

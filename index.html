@@ -30,15 +30,17 @@
       height: 100%;
       overflow-x: hidden;
       overflow-y: scroll;
-      scrollbar-width: none; /* Firefox */
+      scrollbar-width: none;
       -ms-overflow-style: none; 
       background: var(--dark);
       color: var(--text);
       font-family: 'Courier New', 'Lucida Console', monospace;
     }
+    
     html::-webkit-scrollbar {
-    display: none; /* Chrome/Safari */
+      display: none;
     }
+
     /* ── Scanlines Overlay ────────────────────────── */
     body::before {
       content: '';
@@ -403,7 +405,6 @@
       .vote-buttons{gap:16px;}
       .vote-btn{padding:14px 36px;letter-spacing:5px;}
       
-      /* Mobile video optimizations */
       .screen-wrapper {
         width: 95vw;
         margin-bottom: 30px;
@@ -457,16 +458,10 @@
 </head>
 <body>
 
-  <!-- Background streaming lines -->
   <div class="bg-streams" id="bgStreams"></div>
-
-  <!-- Glitch flash overlay -->
   <div class="glitch-overlay" id="glitchOverlay"></div>
-
-  <!-- Pixel noise overlay -->
   <canvas class="pixel-noise" id="pixelNoise"></canvas>
 
-  <!-- Header -->
   <div class="header">
     <div class="logo">
       <span>Disconnect</span>
@@ -476,7 +471,6 @@
     <div class="countdown" id="countdown">24:00:00</div>
   </div>
 
-  <!-- Main Content -->
   <div class="container">
     <div class="title-block">
       <h1 class="main-title" id="mainTitle">
@@ -490,7 +484,6 @@
       <button class="vote-btn btn-nein" id="btnNein" aria-label="Nein stimmen">NEIN</button>
     </div>
 
-    <!-- Screen Display -->
     <div class="screen-wrapper">
       <div class="screen-controls">
         <span class="screen-label" id="screenLabel">Video läuft</span>
@@ -502,7 +495,6 @@
         <div class="screen-corner bl"></div>
         <div class="screen-corner br"></div>
 
-        <!-- Video with multiple source fallbacks -->
         <video id="screenVideo" loop playsinline muted preload="auto" webkit-playsinline>
           <source src="./video/admin-video.mp4" type="video/mp4">
           <source src="video/admin-video.mp4" type="video/mp4">
@@ -535,13 +527,10 @@
 
   <div class="fs-hint" id="fsHint" title="Vollbild aktivieren">Fullscreen</div>
 
-  <!-- Firebase SDK -->
   <script type="module">
-    // Firebase imports
     import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
-    import { getDatabase, ref, onValue, set, runTransaction } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js';
+    import { getDatabase, ref, onValue, runTransaction, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js';
 
-    // Firebase config
     const firebaseConfig = {
       apiKey: "AIzaSyB8GccuvcMW3dAjBOd1N7tBmP9EeVA7TzA",
       authDomain: "disconnect-voting.firebaseapp.com",
@@ -552,10 +541,10 @@
       appId: "1:553614816711:web:f239a9026cefa9482055e2"
     };
 
-    // Initialize Firebase
     const app = initializeApp(firebaseConfig);
     const database = getDatabase(app);
     const votesRef = ref(database, 'votes');
+    const timerRef = ref(database, 'timer');
 
     // UI Elements
     const btnJa = document.getElementById('btnJa');
@@ -566,11 +555,11 @@
     const statJa = document.getElementById('statJa');
     const statNein = document.getElementById('statNein');
     const totalVotes = document.getElementById('totalVotes');
+    const countdownEl = document.getElementById('countdown');
 
-    // Check if user already voted
     let voted = localStorage.getItem('voted') === 'true';
 
-    // Update UI with vote data
+    // ── Vote Logic ──────────────────────────────────
     function updateUI(votesJa, votesNein) {
       let total = votesJa + votesNein;
       if(total === 0) total = 1;
@@ -585,13 +574,11 @@
       totalVotes.textContent = total + ' Stimmen';
     }
 
-    // Listen for real-time updates
     onValue(votesRef, (snapshot) => {
       const data = snapshot.val() || { ja: 0, nein: 0 };
       updateUI(data.ja, data.nein);
     });
 
-    // Disable buttons if already voted
     function disableButtons() {
       btnJa.disabled = true;
       btnNein.disabled = true;
@@ -599,10 +586,8 @@
 
     if(voted) disableButtons();
 
-    // Vote for JA
     btnJa.addEventListener('click', () => {
       if(voted) return;
-      
       runTransaction(votesRef, (current) => {
         if(!current) return { ja: 1, nein: 0 };
         return { ja: (current.ja || 0) + 1, nein: current.nein || 0 };
@@ -613,10 +598,8 @@
       });
     });
 
-    // Vote for NEIN
     btnNein.addEventListener('click', () => {
       if(voted) return;
-      
       runTransaction(votesRef, (current) => {
         if(!current) return { ja: 0, nein: 1 };
         return { ja: current.ja || 0, nein: (current.nein || 0) + 1 };
@@ -627,37 +610,76 @@
       });
     });
 
-    // Video Loading
+    // ── Firebase Synced Timer ──────────────────────
+    let timerInterval;
+
+    function updateCountdown(timeLeft) {
+      if(timeLeft <= 0) {
+        countdownEl.textContent = '00:00:00';
+        return;
+      }
+      
+      let h = Math.floor(timeLeft/3600).toString().padStart(2,'0');
+      let m = Math.floor((timeLeft%3600)/60).toString().padStart(2,'0');
+      let s = (timeLeft%60).toString().padStart(2,'0');
+      countdownEl.textContent = `${h}:${m}:${s}`;
+    }
+
+    onValue(timerRef, (snapshot) => {
+      const timerData = snapshot.val();
+      
+      if(timerInterval) {
+        clearInterval(timerInterval);
+      }
+
+      if(!timerData || !timerData.isRunning) {
+        // Timer gestoppt oder nicht initialisiert
+        const duration = (timerData && timerData.duration) || 86400;
+        updateCountdown(duration);
+        return;
+      }
+
+      // Timer läuft
+      const startTime = timerData.startTime;
+      const duration = timerData.duration || 86400;
+
+      timerInterval = setInterval(() => {
+        const now = Date.now();
+        const elapsed = Math.floor((now - startTime) / 1000);
+        const remaining = duration - elapsed;
+        
+        if(remaining <= 0) {
+          clearInterval(timerInterval);
+          updateCountdown(0);
+          return;
+        }
+        
+        updateCountdown(remaining);
+      }, 100); // Update alle 100ms für bessere Sync
+    });
+
+    // ── Video Loading ──────────────────────────────
     const screenVideo = document.getElementById('screenVideo');
     const screenDisplay = document.getElementById('screenDisplay');
     const screenLabel = document.getElementById('screenLabel');
 
     function initVideo() {
       screenVideo.play().then(() => {
-        console.log('Video playing successfully');
         screenLabel.textContent = 'Video läuft';
       }).catch(err => {
-        console.warn('Autoplay failed, user interaction required:', err);
         screenLabel.textContent = 'Klicken zum Abspielen';
-        
         screenDisplay.addEventListener('click', () => {
           screenVideo.play().then(() => {
             screenLabel.textContent = 'Video läuft';
           }).catch(e => {
-            console.error('Video play error:', e);
             showVideoError();
           });
         }, { once: true });
       });
     }
 
-    screenVideo.addEventListener('error', (e) => {
-      console.error('Video error:', e);
+    screenVideo.addEventListener('error', () => {
       showVideoError();
-    });
-
-    screenVideo.addEventListener('loadedmetadata', () => {
-      console.log('Video metadata loaded');
     });
 
     function showVideoError() {
@@ -679,21 +701,7 @@
       initVideo();
     }
 
-    // Countdown Timer
-let timeLeft = 86400; // 24h in Sekunden
-const countdownTimer = setInterval(() => {
-  if(timeLeft<=0) {
-    clearInterval(countdownTimer);
-    return;
-  }
-  timeLeft--;
-  let h = Math.floor(timeLeft/3600).toString().padStart(2,'0');
-  let m = Math.floor((timeLeft%3600)/60).toString().padStart(2,'0');
-  let s = (timeLeft%60).toString().padStart(2,'0');
-  document.getElementById('countdown').textContent = `${h}:${m}:${s}`;
-}, 1000);
-
-    // Background lines
+    // ── Background lines ───────────────────────────
     const bgStreams = document.getElementById('bgStreams');
     for(let i=0;i<60;i++){
       let div = document.createElement('div');
@@ -704,7 +712,7 @@ const countdownTimer = setInterval(() => {
       bgStreams.appendChild(div);
     }
 
-    // Pixel noise
+    // ── Pixel noise ────────────────────────────────
     const canvas = document.getElementById('pixelNoise');
     const ctx = canvas.getContext('2d');
     function resizeCanvas(){ canvas.width=window.innerWidth; canvas.height=window.innerHeight; }
@@ -723,11 +731,14 @@ const countdownTimer = setInterval(() => {
     }
     setInterval(noiseFlash,800);
 
-    // Glitch title
+    // ── Glitch title ───────────────────────────────
     const mainTitle = document.getElementById('mainTitle');
-    setInterval(()=>{ mainTitle.classList.add('glitch-active'); setTimeout(()=>mainTitle.classList.remove('glitch-active'),300); },4000);
+    setInterval(()=>{ 
+      mainTitle.classList.add('glitch-active'); 
+      setTimeout(()=>mainTitle.classList.remove('glitch-active'),300); 
+    },4000);
 
-    // Fullscreen
+    // ── Fullscreen ─────────────────────────────────
     const fsHint = document.getElementById('fsHint');
     fsHint.addEventListener('click',()=>{ 
       if(document.documentElement.requestFullscreen) {

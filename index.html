@@ -527,10 +527,12 @@
 
   <div class="fs-hint" id="fsHint" title="Vollbild aktivieren">Fullscreen</div>
 
-  <script type="module">
-    import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
-    import { getDatabase, ref, onValue, runTransaction, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js';
+  <!-- Firebase v9 Compat SDK - Works without modules -->
+  <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
 
+  <script>
+    // Firebase config
     const firebaseConfig = {
       apiKey: "AIzaSyB8GccuvcMW3dAjBOd1N7tBmP9EeVA7TzA",
       authDomain: "disconnect-voting.firebaseapp.com",
@@ -541,10 +543,9 @@
       appId: "1:553614816711:web:f239a9026cefa9482055e2"
     };
 
-    const app = initializeApp(firebaseConfig);
-    const database = getDatabase(app);
-    const votesRef = ref(database, 'votes');
-    const timerRef = ref(database, 'timer');
+    // Initialize Firebase
+    firebase.initializeApp(firebaseConfig);
+    const database = firebase.database();
 
     // UI Elements
     const btnJa = document.getElementById('btnJa');
@@ -574,7 +575,7 @@
       totalVotes.textContent = total + ' Stimmen';
     }
 
-    onValue(votesRef, (snapshot) => {
+    database.ref('votes').on('value', (snapshot) => {
       const data = snapshot.val() || { ja: 0, nein: 0 };
       updateUI(data.ja, data.nein);
     });
@@ -588,7 +589,7 @@
 
     btnJa.addEventListener('click', () => {
       if(voted) return;
-      runTransaction(votesRef, (current) => {
+      database.ref('votes').transaction((current) => {
         if(!current) return { ja: 1, nein: 0 };
         return { ja: (current.ja || 0) + 1, nein: current.nein || 0 };
       }).then(() => {
@@ -600,7 +601,7 @@
 
     btnNein.addEventListener('click', () => {
       if(voted) return;
-      runTransaction(votesRef, (current) => {
+      database.ref('votes').transaction((current) => {
         if(!current) return { ja: 0, nein: 1 };
         return { ja: current.ja || 0, nein: (current.nein || 0) + 1 };
       }).then(() => {
@@ -625,23 +626,23 @@
       countdownEl.textContent = `${h}:${m}:${s}`;
     }
 
-    onValue(timerRef, (snapshot) => {
+    database.ref('timer').on('value', (snapshot) => {
       const timerData = snapshot.val();
       
-      console.log('Timer data from Firebase:', timerData); // Debug
+      console.log('🔥 Timer data:', timerData);
       
       if(timerInterval) {
         clearInterval(timerInterval);
       }
 
       if(!timerData) {
-        console.log('No timer data, showing default 24h');
+        console.log('⚠️ No timer data');
         updateCountdown(86400);
         return;
       }
 
       if(!timerData.isRunning) {
-        console.log('Timer paused at:', timerData.duration);
+        console.log('⏸️ Timer paused');
         updateCountdown(timerData.duration || 86400);
         return;
       }
@@ -650,15 +651,15 @@
       const startTime = timerData.startTime;
       const duration = timerData.duration || 86400;
       
-      console.log('Timer running - start:', new Date(startTime), 'duration:', duration);
+      console.log('▶️ Timer running:', {startTime, duration});
 
-      // Sofort einmal updaten
+      // Sofort updaten
       const now = Date.now();
       const elapsed = Math.floor((now - startTime) / 1000);
       const remaining = Math.max(0, duration - elapsed);
       updateCountdown(remaining);
 
-      // Dann kontinuierlich updaten
+      // Dann jede Sekunde
       timerInterval = setInterval(() => {
         const now = Date.now();
         const elapsed = Math.floor((now - startTime) / 1000);
@@ -671,7 +672,7 @@
         }
         
         updateCountdown(remaining);
-      }, 1000); // Update jede Sekunde
+      }, 1000);
     });
 
     // ── Video Loading ──────────────────────────────
